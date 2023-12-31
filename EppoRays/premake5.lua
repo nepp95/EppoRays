@@ -1,4 +1,4 @@
-project "EppoApp"
+project "EppoRays"
     kind "ConsoleApp"
     language "C++"
     cppdialect "C++17"

@@ -1,6 +1,6 @@
-workspace "EppoApp"
+workspace "EppoRays"
     architecture "x86_64"
-    startproject "EppoApp"
+    startproject "EppoRays"
 
     configurations {
         "Debug",
@@ -17,5 +17,5 @@ workspace "EppoApp"
         include "EppoCore/EppoCore"
     
     group "App"
-        include "EppoApp"
+        include "EppoRays"
     group ""
