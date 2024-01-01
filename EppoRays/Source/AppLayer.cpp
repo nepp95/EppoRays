@@ -10,8 +10,9 @@ void AppLayer::OnUpdate(float timestep)
 {
 	Timer timer;
 
+	m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
 	m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
-	m_Renderer.Render();
+	m_Renderer.Render(m_Camera);
 
 	m_LastRenderTime = timer.GetElapsedMicroseconds();
 }
@@ -33,6 +34,6 @@ void AppLayer::OnUIRender()
 	ImGui::PopStyleVar();
 
 	ImGui::Begin("Settings");
-
+	ImGui::Text("Render time: %.3fms", m_LastRenderTime / 1000.0f);
 	ImGui::End();
 }

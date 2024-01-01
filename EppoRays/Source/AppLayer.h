@@ -1,6 +1,7 @@
 #pragma once
 
 #include <EppoCore.h>
+#include "RT/Camera.h"
 #include "RT/Renderer.h"
 
 using namespace Eppo;
@@ -17,6 +18,7 @@ public:
 	void OnUIRender() override;
 
 private:
+	Camera m_Camera = Camera(45.0f, 0.1f, 1000.0f);
 	Renderer m_Renderer;
 
 	uint32_t m_ViewportWidth = 0;

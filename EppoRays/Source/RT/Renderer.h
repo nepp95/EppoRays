@@ -1,6 +1,10 @@
 #pragma once
 
-#include <glm/glm/glm.hpp>
+#include <EppoCore.h>
+#include "RT/Camera.h"
+#include "RT/Ray.h"
+
+#include <glm/glm.hpp>
 
 #include <memory>
 
