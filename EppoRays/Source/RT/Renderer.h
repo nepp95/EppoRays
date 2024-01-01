@@ -3,6 +3,7 @@
 #include <EppoCore.h>
 #include "RT/Camera.h"
 #include "RT/Ray.h"
+#include "RT/Scene.h"
 
 #include <glm/glm.hpp>
 
@@ -13,10 +14,8 @@ class Renderer
 public:
 	Renderer() = default;
 
-	void Init();
-
 	void OnResize(uint32_t width, uint32_t height);
-	void Render(const Camera& camera);
+	void Render(const Scene& scene, const Camera& camera);
 
 	const std::shared_ptr<Eppo::Image>& GetImage() const { return m_Image; }
 	uint32_t* GetImageData() const { return m_ImageData; }
@@ -27,15 +26,17 @@ public:
 private:
 	struct HitPayload
 	{
-		float HitDistance;
+		float HitDistance = -1.0f;
 		glm::vec3 WorldPosition;
 		glm::vec3 WorldNormal;
+
+		uint32_t ObjectIndex;
 	};
 
 	glm::vec4 RayGen(uint32_t x, uint32_t y) const;
 
 	HitPayload TraceRay(const Ray& ray) const;
-	HitPayload ClosestHit(const Ray& ray, float hitDistance) const;
+	HitPayload ClosestHit(const Ray& ray, float hitDistance, uint32_t objectIndex) const;
 	HitPayload Miss() const;
 
 private:
@@ -43,6 +44,7 @@ private:
 	uint32_t* m_ImageData = nullptr;
 	
 	const Camera* m_ActiveCamera = nullptr;
+	const Scene* m_ActiveScene = nullptr;
 
 	uint32_t m_ViewportWidth = 0;
 	uint32_t m_ViewportHeight = 0;
