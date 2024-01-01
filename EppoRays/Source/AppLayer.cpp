@@ -29,7 +29,8 @@ void AppLayer::OnUpdate(float timestep)
 	m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
 	m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
 
-	m_Camera.OnUpdate(timestep);
+	if (m_Camera.OnUpdate(timestep))
+		m_Renderer.ResetFrameIndex();
 
 	Timer renderTimer;
 	m_Renderer.Render(m_Scene, m_Camera);
@@ -55,6 +56,10 @@ void AppLayer::OnUIRender()
 	ImGui::Begin("Settings");
 	
 	ImGui::Text("Render time: %.3fms", m_LastRenderTime / 1000.0f);
+	ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().m_Accumulate);
+	
+	if (ImGui::Button("Reset"))
+		m_Renderer.ResetFrameIndex();
 
 	ImGui::Separator();
 

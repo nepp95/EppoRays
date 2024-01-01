@@ -23,6 +23,8 @@ Application *Eppo::CreateApplication()
 {
 	ApplicationSpecification spec;
 	spec.Title = "EppoRays";
+	spec.Width = 1600;
+	spec.Height = 900;
 
 	return new EppoRays(spec);
 }

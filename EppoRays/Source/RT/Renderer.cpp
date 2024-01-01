@@ -34,6 +34,10 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 	delete[] m_ImageData;
 	m_ImageData = new uint32_t[width * height];
 
+	delete[] m_AccumulatedColorData;
+	m_AccumulatedColorData = new glm::vec3[width * height];
+	m_FrameIndex = 1;
+
 	m_HorizontalIterator.resize(width);
 	for (uint32_t i = 0; i < width; i++)
 		m_HorizontalIterator[i] = 1;
@@ -51,37 +55,33 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 	m_ActiveCamera = &camera;
 	m_ActiveScene = &scene;
 
-#define MT 0
-#if MT
-
-	std::for_each(std::execution::par, m_VerticalIterator.begin(), m_VerticalIterator.end(), [this](uint32_t y)
-	{
-		std::for_each(std::execution::par, m_HorizontalIterator.begin(), m_HorizontalIterator.end(), [this, y](uint32_t x)
-		{
-			glm::vec4 color = RayGen(x, y);
-			color = glm::clamp(color, 0.0f, 1.0f);
-			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(color);
-		});
-	});
-
-#else
+	if (m_FrameIndex == 1)
+		memset(m_AccumulatedColorData, 0, m_Image->GetWidth() * m_Image->GetHeight() * sizeof(glm::vec3));
 
 	for (uint32_t y = 0; y < m_Image->GetHeight(); y++)
 	{
 		for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
 		{
-			glm::vec4 color = RayGen(x, y);
-			color = glm::clamp(color, 0.0f, 1.0f);
-			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(color);
+			glm::vec3 color = RayGen(x, y);
+			m_AccumulatedColorData[y * m_Image->GetWidth() + x] += color;
+
+			glm::vec3 accumulatedColor = m_AccumulatedColorData[y * m_Image->GetWidth() + x];
+			accumulatedColor /= (float)m_FrameIndex;
+			accumulatedColor = glm::clamp(accumulatedColor, 0.0f, 1.0f);
+			
+			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(glm::vec4(accumulatedColor, 1.0f));
 		}
 	}
 
-#endif
-
 	m_Image->SetData(m_ImageData, m_Image->GetWidth() * m_Image->GetHeight());
+
+	if (m_Settings.m_Accumulate)
+		m_FrameIndex++;
+	else
+		m_FrameIndex = 1;
 }
 
-glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y) const
+glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 {
 	Ray ray;
 	ray.Origin = m_ActiveCamera->GetPosition();
@@ -118,7 +118,7 @@ glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y) const
 		ray.Direction = glm::reflect(ray.Direction,	payload.WorldNormal + material.Roughness * Eppo::Random::Vec3(-0.5f, 0.5f));
 	}
 	
-	return glm::vec4(color, 1.0f);
+	return color;
 }
 
 Renderer::HitPayload Renderer::TraceRay(const Ray& ray) const

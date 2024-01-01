@@ -15,7 +15,7 @@ Camera::Camera(float verticalFOV, float nearClip, float farClip)
 	m_Position = glm::vec3(0.0f, 1.0f, 7.0f);
 }
 
-void Camera::OnUpdate(float ts)
+bool Camera::OnUpdate(float ts)
 {
 	// Calculate the mouse movement delta
 	glm::vec2 mousePosition = Input::GetMousePosition();
@@ -26,12 +26,11 @@ void Camera::OnUpdate(float ts)
 	if (!Input::IsMouseButtonPressed(Mouse::ButtonRight))
 	{
 		Input::SetCursorMode(CursorMode::Normal);
-		return;
+		return false;
 	}
 
 	// We don't want the mouse cursor to move all over the place when moving the camera
 	Input::SetCursorMode(CursorMode::Locked);
-
 
 	// Movement
 	constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
@@ -91,6 +90,8 @@ void Camera::OnUpdate(float ts)
 		CalculateView();
 		CacheRayDirections();
 	}
+
+	return moved;
 }
 
 void Camera::OnResize(uint32_t width, uint32_t height)
