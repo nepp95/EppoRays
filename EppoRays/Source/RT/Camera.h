@@ -2,6 +2,8 @@
 
 #include <glm/glm.hpp>
 
+#include <vector>
+
 class Camera
 {
 public:
@@ -11,16 +13,22 @@ public:
 	void OnResize(uint32_t width, uint32_t height);
 
 	const glm::mat4& GetProjection() const { return m_Projection; }
+	const glm::mat4& GetInverseProjection() const { return m_InverseProjection; }
+
 	const glm::mat4& GetView() const { return m_View; }
+	const glm::mat4& GetInverseView() const { return m_InverseView; }
 
 	const glm::vec3& GetPosition() const { return m_Position; }
 	const glm::vec3& GetDirection() const { return m_ForwardDirection; }
+
+	const glm::vec3& GetRayDirection(uint32_t x, uint32_t y) const { return m_RayDirections[y * m_ViewportWidth + x]; }
 
 	float GetRotationSpeed() const;
 
 private:
 	void CalculateProjection();
 	void CalculateView();
+	void CacheRayDirections();
 
 private:
 	glm::mat4 m_Projection = glm::mat4(1.0f);
@@ -39,4 +47,6 @@ private:
 	glm::vec2 m_LastMousePosition = glm::vec2(0.0f, 0.0f);
 	uint32_t m_ViewportWidth = 0;
 	uint32_t m_ViewportHeight = 0;
+
+	std::vector<glm::vec3> m_RayDirections;
 };

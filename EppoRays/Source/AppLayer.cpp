@@ -12,6 +12,8 @@ void AppLayer::OnUpdate(float timestep)
 
 	m_Camera.OnResize(m_ViewportWidth, m_ViewportHeight);
 	m_Renderer.OnResize(m_ViewportWidth, m_ViewportHeight);
+
+	m_Camera.OnUpdate(timestep);
 	m_Renderer.Render(m_Camera);
 
 	m_LastRenderTime = timer.GetElapsedMicroseconds();

@@ -25,12 +25,28 @@ public:
 	uint32_t GetViewportHeight() const { return m_ViewportHeight; }
 
 private:
-	glm::vec4 TraceRay(const Ray& ray) const;
+	struct HitPayload
+	{
+		float HitDistance;
+		glm::vec3 WorldPosition;
+		glm::vec3 WorldNormal;
+	};
+
+	glm::vec4 RayGen(uint32_t x, uint32_t y) const;
+
+	HitPayload TraceRay(const Ray& ray) const;
+	HitPayload ClosestHit(const Ray& ray, float hitDistance) const;
+	HitPayload Miss() const;
 
 private:
 	std::shared_ptr<Eppo::Image> m_Image;
 	uint32_t* m_ImageData = nullptr;
+	
+	const Camera* m_ActiveCamera = nullptr;
 
 	uint32_t m_ViewportWidth = 0;
 	uint32_t m_ViewportHeight = 0;
+
+	std::vector<uint32_t> m_HorizontalIterator;
+	std::vector<uint32_t> m_VerticalIterator;
 };

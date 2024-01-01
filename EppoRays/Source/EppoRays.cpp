@@ -1,7 +1,7 @@
 #include "AppLayer.h"
 
 #include <EppoCore.h>
-#include <Core/Entrypoint.h>
+#include <EppoCore/Core/Entrypoint.h>
 
 using namespace Eppo;
 

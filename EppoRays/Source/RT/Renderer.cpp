@@ -1,5 +1,7 @@
 #include "Renderer.h"
 
+#include <execution>
+
 namespace Utils
 {
 	inline static uint32_t ConvertToRGBA(const glm::vec4& color)
@@ -35,37 +37,72 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 	delete[] m_ImageData;
 	m_ImageData = new uint32_t[width * height];
 
+	m_HorizontalIterator.resize(width);
+	for (uint32_t i = 0; i < width; i++)
+		m_HorizontalIterator[i] = 1;
+
+	m_VerticalIterator.resize(height);
+	for (uint32_t i = 0; i < height; i++)
+		m_VerticalIterator[i] = 1;
+		
 	m_ViewportWidth = width;
 	m_ViewportHeight = height;
 }
 
 void Renderer::Render(const Camera& camera)
 {
-	Ray ray;
-	ray.Origin = camera.GetPosition();
+	m_ActiveCamera = &camera;
 
-	uint32_t width = m_Image->GetWidth();
-	uint32_t height = m_Image->GetHeight();
+#define MT 0
+#if MT
 
-	for (uint32_t y = 0; y < height; y++)
+	std::for_each(std::execution::par, m_VerticalIterator.begin(), m_VerticalIterator.end(), [this](uint32_t y)
 	{
-		for (uint32_t x = 0; x < width; x++)
+		std::for_each(std::execution::par, m_HorizontalIterator.begin(), m_HorizontalIterator.end(), [this, y](uint32_t x)
 		{
-			// Calculate normalized device coordinates (-1 to 1)
-			glm::vec2 coord = { (float)x / width, (float)y / height };
-			coord = coord * 2.0f - 1.0f;
+			glm::vec4 color = RayGen(x, y);
+			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(color);
+		});
+	});
 
-			ray.Direction = glm::vec3(coord, -1.0f);
-			glm::vec4 color = TraceRay(ray);
+#else
 
-			m_ImageData[y * width + x] = Utils::ConvertToRGBA(color);
+	for (uint32_t y = 0; y < m_Image->GetHeight(); y++)
+	{
+		for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
+		{
+			glm::vec4 color = RayGen(x, y);
+			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(color);
 		}
 	}
 
-	m_Image->SetData(m_ImageData, width * height);
+#endif
+
+	m_Image->SetData(m_ImageData, m_Image->GetWidth() * m_Image->GetHeight());
 }
 
-glm::vec4 Renderer::TraceRay(const Ray& ray) const
+glm::vec4 Renderer::RayGen(uint32_t x, uint32_t y) const
+{
+	Ray ray;
+	ray.Origin = m_ActiveCamera->GetPosition();
+	ray.Direction = m_ActiveCamera->GetRayDirection(x, y);
+
+	HitPayload payload = TraceRay(ray);
+
+	if (payload.HitDistance < 0.0f)
+		return glm::vec4(0.0f);
+
+	glm::vec3 color(0.0f, 1.0f, 0.0f);
+
+	glm::vec3 lightDirection = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
+	float lightIntensity = glm::max(glm::dot(payload.WorldNormal, -lightDirection), 0.0f);
+
+	color *= lightIntensity;
+
+	return glm::vec4(color, 1.0f);
+}
+
+Renderer::HitPayload Renderer::TraceRay(const Ray& ray) const
 {
 	float radius = 0.5f;
 
@@ -83,23 +120,32 @@ glm::vec4 Renderer::TraceRay(const Ray& ray) const
 	// b^2 - 4ac
 	float discriminant = b * b - 4.0f * a * c;
 	if (discriminant < 0)
-		return glm::vec4(0.0f);
+		return Miss();
 
 	// Quadratic formula:
 	// (-b +- sqrt(discriminant)) / 2a
 	float sqrtD = glm::sqrt(discriminant);
 
 	float closestT = (-b - sqrtD) / (2.0f * a);
-	float t1 = (-b + sqrtD) / (2.0f * a);
+	//float t1 = (-b + sqrtD) / (2.0f * a);
 
-	glm::vec3 hitPoint = ray.Origin + ray.Direction * closestT;
-	glm::vec3 normal = glm::normalize(hitPoint);
+	return ClosestHit(ray, closestT);
+}
 
-	glm::vec3 lightDirection = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-	float lightIntensity = glm::max(glm::dot(normal, -lightDirection), 0.0f);
+Renderer::HitPayload Renderer::ClosestHit(const Ray& ray, float hitDistance) const
+{
+	Renderer::HitPayload payload;
+	payload.HitDistance = hitDistance;
+	payload.WorldPosition = ray.Origin + ray.Direction * hitDistance;
+	payload.WorldNormal = glm::normalize(payload.WorldPosition);
 
-	glm::vec3 color(0.0f, 1.0f, 0.0f);
-	color *= lightIntensity;
+	return payload;
+}
 
-	return glm::vec4(color, 1.0f);
+Renderer::HitPayload Renderer::Miss() const
+{
+	Renderer::HitPayload payload;
+	payload.HitDistance = -1.0f;
+
+	return payload;
 }
