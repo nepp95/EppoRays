@@ -20,10 +20,14 @@ public:
 public:
 	Renderer() = default;
 
+	void Init();
+
 	void OnResize(uint32_t width, uint32_t height);
 	void Render(const Scene& scene, const Camera& camera);
 
 	Settings& GetSettings() { return m_Settings; }
+
+	uint32_t GetFrameIndex() const { return m_FrameIndex; }
 	void ResetFrameIndex() { m_FrameIndex = 1; }
 
 	const std::shared_ptr<Eppo::Image>& GetImage() const { return m_Image; }
@@ -51,6 +55,9 @@ private:
 private:
 	Settings m_Settings;
 
+	std::shared_ptr<Eppo::ComputeShader> m_Compute;
+	std::shared_ptr<Eppo::Buffer> m_Buffer;
+
 	std::shared_ptr<Eppo::Image> m_Image;
 	uint32_t* m_ImageData = nullptr;
 
@@ -63,6 +70,5 @@ private:
 	uint32_t m_ViewportWidth = 0;
 	uint32_t m_ViewportHeight = 0;
 
-	std::vector<uint32_t> m_HorizontalIterator;
 	std::vector<uint32_t> m_VerticalIterator;
 };

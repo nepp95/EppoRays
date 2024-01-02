@@ -25,6 +25,11 @@ namespace Utils
 	}
 }
 
+void Renderer::Init()
+{
+	m_Compute = std::make_shared<Eppo::ComputeShader>("Shaders/rt.glsl");
+}
+
 void Renderer::OnResize(uint32_t width, uint32_t height)
 {
 	if (m_Image && width == m_Image->GetWidth() && height == m_Image->GetHeight())
@@ -38,13 +43,11 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 	m_AccumulatedColorData = new glm::vec3[width * height];
 	m_FrameIndex = 1;
 
-	m_HorizontalIterator.resize(width);
-	for (uint32_t i = 0; i < width; i++)
-		m_HorizontalIterator[i] = 1;
+	m_Buffer = std::make_shared<Eppo::Buffer>(width * height * sizeof(glm::vec4));
 
 	m_VerticalIterator.resize(height);
 	for (uint32_t i = 0; i < height; i++)
-		m_VerticalIterator[i] = 1;
+		m_VerticalIterator[i] = i;
 		
 	m_ViewportWidth = width;
 	m_ViewportHeight = height;
@@ -57,6 +60,47 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 
 	if (m_FrameIndex == 1)
 		memset(m_AccumulatedColorData, 0, m_Image->GetWidth() * m_Image->GetHeight() * sizeof(glm::vec3));
+
+#define MT 1
+#define GPU 0
+#if GPU
+
+	m_Compute->Bind();
+	m_Compute->Dispatch(m_Image->GetWidth(), m_Image->GetHeight(), 1);
+
+	m_Buffer->Bind();
+	glm::vec4* data = m_Buffer->MapBuffer();
+	if (!data)
+		return;
+
+	for (uint32_t y = 0; y < m_Image->GetHeight(); y++)
+	{
+		for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
+		{
+			glm::vec4 color = data[y * m_Image->GetWidth() + x];
+			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(color);
+		}
+	}
+
+#else // GPU
+#if MT
+
+	std::for_each(std::execution::par, m_VerticalIterator.begin(), m_VerticalIterator.end(), [this](uint32_t y)
+	{
+		for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
+		{
+			glm::vec3 color = RayGen(x, y);
+			m_AccumulatedColorData[y * m_Image->GetWidth() + x] += color;
+
+			glm::vec3 accumulatedColor = m_AccumulatedColorData[y * m_Image->GetWidth() + x];
+			accumulatedColor /= (float)m_FrameIndex;
+			accumulatedColor = glm::clamp(accumulatedColor, 0.0f, 1.0f);
+
+			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(glm::vec4(accumulatedColor, 1.0f));
+		}
+	});
+
+#else // MT
 
 	for (uint32_t y = 0; y < m_Image->GetHeight(); y++)
 	{
@@ -72,6 +116,9 @@ void Renderer::Render(const Scene& scene, const Camera& camera)
 			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(glm::vec4(accumulatedColor, 1.0f));
 		}
 	}
+
+#endif // MT
+#endif // GPU
 
 	m_Image->SetData(m_ImageData, m_Image->GetWidth() * m_Image->GetHeight());
 
@@ -90,7 +137,7 @@ glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 	glm::vec3 color = glm::vec3(0.0f);
 	float multiplier = 1.0f;
 
-	uint32_t bounces = 5;
+	uint32_t bounces = 20;
 	for (uint32_t i = 0; i < bounces; i++)
 	{
 		HitPayload payload = TraceRay(ray);

@@ -13,6 +13,10 @@ void AppLayer::OnAttach()
 	blueMaterial.Albedo = glm::vec3(0.2f, 0.6f, 0.8f);
 	blueMaterial.Roughness = 0.1f;
 
+	Material& mirrorMaterial = m_Scene.m_Materials.emplace_back();
+	mirrorMaterial.Albedo = glm::vec3(0.0f, 0.0f, 0.0f);
+	mirrorMaterial.Roughness = 0.001f;
+
 	Sphere& smallSphere = m_Scene.m_Spheres.emplace_back();
 	smallSphere.Position = glm::vec3(0.0f, 1.0f, 0.0f);
 	smallSphere.Radius = 1.0f;
@@ -22,6 +26,13 @@ void AppLayer::OnAttach()
 	bigSphere.Position = glm::vec3(0.0f, -50.0f, 0.0f);
 	bigSphere.Radius = 50.0f;
 	bigSphere.MaterialIndex = 1;
+
+	Sphere& mirrorSphere = m_Scene.m_Spheres.emplace_back();
+	mirrorSphere.Position = glm::vec3(-2.0f, 0.5f, 1.5f);
+	mirrorSphere.Radius = 0.5f;
+	mirrorSphere.MaterialIndex = 2;
+
+	m_Renderer.Init();
 }
 
 void AppLayer::OnUpdate(float timestep)
@@ -56,7 +67,12 @@ void AppLayer::OnUIRender()
 	ImGui::Begin("Settings");
 	
 	ImGui::Text("Render time: %.3fms", m_LastRenderTime / 1000.0f);
+
 	ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().m_Accumulate);
+
+	bool accumulate = m_Renderer.GetSettings().m_Accumulate;
+	if (accumulate)
+		ImGui::Text("Frames accumulated: %d", m_Renderer.GetFrameIndex());
 	
 	if (ImGui::Button("Reset"))
 		m_Renderer.ResetFrameIndex();
