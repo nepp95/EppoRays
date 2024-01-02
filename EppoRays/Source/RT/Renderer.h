@@ -12,6 +12,13 @@
 class Renderer
 {
 public:
+	enum class RenderMode
+	{
+		CpuST,
+		CpuMT,
+		Gpu
+	};
+
 	struct Settings
 	{
 		bool m_Accumulate = false;
@@ -23,7 +30,8 @@ public:
 	void Init();
 
 	void OnResize(uint32_t width, uint32_t height);
-	void Render(const Scene& scene, const Camera& camera);
+
+	void Render(const Scene& scene, const Camera& camera, RenderMode mode);
 
 	Settings& GetSettings() { return m_Settings; }
 
@@ -45,6 +53,10 @@ private:
 
 		uint32_t ObjectIndex;
 	};
+
+	void RenderST(const Scene& scene, const Camera& camera);
+	void RenderMT(const Scene& scene, const Camera& camera);
+	void RenderGPU(const Scene& scene, const Camera& camera);
 
 	glm::vec3 RayGen(uint32_t x, uint32_t y) const;
 

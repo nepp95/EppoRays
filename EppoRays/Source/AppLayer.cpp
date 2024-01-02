@@ -44,7 +44,7 @@ void AppLayer::OnUpdate(float timestep)
 		m_Renderer.ResetFrameIndex();
 
 	Timer renderTimer;
-	m_Renderer.Render(m_Scene, m_Camera);
+	m_Renderer.Render(m_Scene, m_Camera, Renderer::RenderMode::CpuMT);
 	m_LastRenderTime = renderTimer.GetElapsedMicroseconds();
 }
 
