@@ -138,8 +138,8 @@ glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 	ray.Origin = m_ActiveCamera->GetPosition();
 	ray.Direction = m_ActiveCamera->GetRayDirection(x, y);
 
-	glm::vec3 color = glm::vec3(0.0f);
-	float multiplier = 1.0f;
+	glm::vec3 light(0.0f);
+	glm::vec3 contribution(1.0f);
 
 	uint32_t seed = y * m_Image->GetWidth() + x;
 	seed *= m_FrameIndex;
@@ -154,27 +154,22 @@ glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 		if (payload.HitDistance < 0.0f)
 		{
 			glm::vec3 skyColor = Utils::Lerp(glm::vec3(1.0f), glm::vec3(0.5f, 0.7f, 1.0f), ray.Direction.y);
-			color += skyColor * multiplier;
+			//color += skyColor * multiplier;
 			break;
 		}
-
-		glm::vec3 lightDirection = glm::normalize(glm::vec3(-1.0f, -1.0f, -1.0f));
-		float lightIntensity = glm::max(glm::dot(payload.WorldNormal, -lightDirection), 0.0f);
 
 		const Sphere& sphere = m_ActiveScene->m_Spheres[payload.ObjectIndex];
 		const Material& material = m_ActiveScene->m_Materials[sphere.MaterialIndex];
 
-		glm::vec3 sphereColor = material.Albedo;
-		sphereColor *= lightIntensity;
-
-		color += sphereColor * multiplier;
-		multiplier *= 0.5f;
+		contribution *= material.Albedo;
+		light += material.Emission * material.EmissionPower;
 
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
-		ray.Direction = glm::reflect(ray.Direction,	payload.WorldNormal + material.Roughness * Eppo::FastRandom::InUnitSphere(seed));
+		ray.Direction = glm::normalize(payload.WorldNormal + Eppo::FastRandom::InUnitSphere(seed));
+		//ray.Direction = glm::reflect(ray.Direction,	payload.WorldNormal + material.Roughness * Eppo::FastRandom::InUnitSphere(seed));
 	}
 	
-	return color;
+	return light;
 }
 
 Renderer::HitPayload Renderer::TraceRay(const Ray& ray) const

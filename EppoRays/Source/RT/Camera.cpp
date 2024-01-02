@@ -106,6 +106,22 @@ void Camera::OnResize(uint32_t width, uint32_t height)
 	CacheRayDirections();
 }
 
+void Camera::SetPosition(const glm::vec3& position)
+{
+	m_Position = position;
+
+	CalculateView();
+	CacheRayDirections();
+}
+
+void Camera::SetDirection(const glm::vec3& direction)
+{
+	m_ForwardDirection = direction;
+
+	CalculateView();
+	CacheRayDirections();
+}
+
 float Camera::GetRotationSpeed() const
 {
 	return 0.3f;

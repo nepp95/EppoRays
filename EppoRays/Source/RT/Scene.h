@@ -16,6 +16,9 @@ struct Material
 {
 	glm::vec3 Albedo = glm::vec3(1.0f);
 	float Roughness = 0.0f;
+
+	glm::vec3 Emission = glm::vec3(1.0f, 1.0f, 1.0f);
+	float EmissionPower = 0.0f;
 };
 
 struct Scene

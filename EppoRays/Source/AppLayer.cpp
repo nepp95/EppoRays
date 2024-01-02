@@ -13,9 +13,11 @@ void AppLayer::OnAttach()
 	blueMaterial.Albedo = glm::vec3(0.2f, 0.6f, 0.8f);
 	blueMaterial.Roughness = 0.1f;
 
-	Material& mirrorMaterial = m_Scene.m_Materials.emplace_back();
-	mirrorMaterial.Albedo = glm::vec3(0.0f, 0.0f, 0.0f);
-	mirrorMaterial.Roughness = 0.001f;
+	Material& lightMaterial = m_Scene.m_Materials.emplace_back();
+	lightMaterial.Albedo = glm::vec3(0.0f, 0.0f, 0.0f);
+	lightMaterial.Roughness = 0.01f;
+	lightMaterial.Emission = glm::vec3(0.7f, 0.2f, 0.0f);
+	lightMaterial.EmissionPower = 5.0f;
 
 	Sphere& smallSphere = m_Scene.m_Spheres.emplace_back();
 	smallSphere.Position = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -27,10 +29,13 @@ void AppLayer::OnAttach()
 	bigSphere.Radius = 50.0f;
 	bigSphere.MaterialIndex = 1;
 
-	Sphere& mirrorSphere = m_Scene.m_Spheres.emplace_back();
-	mirrorSphere.Position = glm::vec3(-2.0f, 0.5f, 1.5f);
-	mirrorSphere.Radius = 0.5f;
-	mirrorSphere.MaterialIndex = 2;
+	Sphere& lightSphere = m_Scene.m_Spheres.emplace_back();
+	lightSphere.Position = glm::vec3(0.0f, 5.0f, -30.0f);
+	lightSphere.Radius = 10.0f;
+	lightSphere.MaterialIndex = 2;
+
+	m_Camera.SetPosition(glm::vec3(4.0f, 2.0f, 3.0f));
+	m_Camera.SetDirection(glm::vec3(-0.6f, -0.2f, -0.8f));
 
 	m_Renderer.Init();
 }
@@ -67,6 +72,8 @@ void AppLayer::OnUIRender()
 	ImGui::Begin("Settings");
 	
 	ImGui::Text("Render time: %.3fms", m_LastRenderTime / 1000.0f);
+	ImGui::Text("Camera position: X: %.1f, Y: %.1f, Z: %.1f", m_Camera.GetPosition().x, m_Camera.GetPosition().y, m_Camera.GetPosition().z);
+	ImGui::Text("Camera direction: X: %.1f, Y: %.1f, Z: %.1f", m_Camera.GetDirection().x, m_Camera.GetDirection().y, m_Camera.GetDirection().z);
 
 	ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().m_Accumulate);
 
@@ -91,6 +98,8 @@ void AppLayer::OnUIRender()
 			ImGui::PushID(i);
 			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
 			ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
+			ImGui::ColorEdit3("Emission", glm::value_ptr(material.Emission));
+			ImGui::DragFloat("Emission Power", &material.EmissionPower, 0.01f, 0.0f, 1.0f);
 			ImGui::PopID();
 		}
 	}
@@ -105,7 +114,7 @@ void AppLayer::OnUIRender()
 				ImGui::Separator();
 
 			ImGui::PushID(i);
-			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position));
+			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
 			ImGui::DragFloat("Radius", &sphere.Radius);
 			ImGui::DragInt("Material index", (int*)&sphere.MaterialIndex, 1.0f, 0, m_Scene.m_Materials.size() - 1);
 			ImGui::PopID();
