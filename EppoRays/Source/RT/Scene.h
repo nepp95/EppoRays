@@ -4,7 +4,7 @@
 
 #include <vector>
 
-struct Sphere
+struct alignas(16) Sphere
 {
 	glm::vec3 Position = glm::vec3(0.0f);
 	float Radius = 1.0f;
@@ -12,7 +12,7 @@ struct Sphere
 	uint32_t MaterialIndex = 0;
 };
 
-struct Material
+struct alignas(16) Material
 {
 	glm::vec3 Albedo = glm::vec3(1.0f);
 	float Roughness = 0.0f;

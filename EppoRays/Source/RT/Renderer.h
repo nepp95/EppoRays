@@ -21,7 +21,8 @@ public:
 
 	struct Settings
 	{
-		bool m_Accumulate = false;
+		bool m_Accumulate = true;
+		uint64_t m_LastRenderTime = 0;
 	};
 
 public:
@@ -30,7 +31,6 @@ public:
 	void Init();
 
 	void OnResize(uint32_t width, uint32_t height);
-
 	void Render(const Scene& scene, const Camera& camera, RenderMode mode);
 
 	Settings& GetSettings() { return m_Settings; }
@@ -54,9 +54,10 @@ private:
 		uint32_t ObjectIndex;
 	};
 
-	void RenderST(const Scene& scene, const Camera& camera);
-	void RenderMT(const Scene& scene, const Camera& camera);
-	void RenderGPU(const Scene& scene, const Camera& camera);
+	void RenderCommon(uint32_t y);
+	void RenderST();
+	void RenderMT();
+	void RenderGPU();
 
 	glm::vec3 RayGen(uint32_t x, uint32_t y) const;
 
@@ -68,10 +69,23 @@ private:
 	Settings m_Settings;
 
 	std::shared_ptr<Eppo::ComputeShader> m_Compute;
-	std::shared_ptr<Eppo::Buffer> m_Buffer;
+	std::shared_ptr<Eppo::Buffer> m_PixelSB;
+	std::shared_ptr<Eppo::Buffer> m_SphereSB;
+	std::shared_ptr<Eppo::Buffer> m_MaterialSB;
 
 	std::shared_ptr<Eppo::Image> m_Image;
 	uint32_t* m_ImageData = nullptr;
+
+	struct CameraData
+	{
+		glm::mat4 View;
+		glm::mat4 InverseView;
+		glm::mat4 Projection;
+		glm::mat4 InverseProjection;
+		glm::vec4 Position;
+		glm::vec4 Direction;
+	} m_CameraData;
+	std::shared_ptr<Eppo::UniformBuffer> m_CameraUB;
 
 	glm::vec3* m_AccumulatedColorData = nullptr;
 	uint32_t m_FrameIndex = 1;

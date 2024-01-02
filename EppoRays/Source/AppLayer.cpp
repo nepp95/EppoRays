@@ -17,7 +17,7 @@ void AppLayer::OnAttach()
 	lightMaterial.Albedo = glm::vec3(0.0f, 0.0f, 0.0f);
 	lightMaterial.Roughness = 0.01f;
 	lightMaterial.Emission = glm::vec3(0.7f, 0.2f, 0.0f);
-	lightMaterial.EmissionPower = 5.0f;
+	lightMaterial.EmissionPower = 10.0f;
 
 	Sphere& smallSphere = m_Scene.m_Spheres.emplace_back();
 	smallSphere.Position = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -71,7 +71,8 @@ void AppLayer::OnUIRender()
 
 	ImGui::Begin("Settings");
 	
-	ImGui::Text("Render time: %.3fms", m_LastRenderTime / 1000.0f);
+	ImGui::Text("Render time(cpu): %.3fms", m_LastRenderTime / 1000.0f);
+	ImGui::Text("Render time(gpu): %.3fms", m_Renderer.GetSettings().m_LastRenderTime / 1000.0f / 1000.0f);
 	ImGui::Text("Camera position: X: %.1f, Y: %.1f, Z: %.1f", m_Camera.GetPosition().x, m_Camera.GetPosition().y, m_Camera.GetPosition().z);
 	ImGui::Text("Camera direction: X: %.1f, Y: %.1f, Z: %.1f", m_Camera.GetDirection().x, m_Camera.GetDirection().y, m_Camera.GetDirection().z);
 

@@ -28,6 +28,8 @@ namespace Utils
 void Renderer::Init()
 {
 	m_Compute = std::make_shared<Eppo::ComputeShader>("Shaders/rt.glsl");
+
+	m_CameraUB = std::make_shared<Eppo::UniformBuffer>(sizeof(CameraData), 3);
 }
 
 void Renderer::OnResize(uint32_t width, uint32_t height)
@@ -43,7 +45,7 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 	m_AccumulatedColorData = new glm::vec3[width * height];
 	m_FrameIndex = 1;
 
-	m_Buffer = std::make_shared<Eppo::Buffer>(width * height * sizeof(glm::vec4));
+	m_PixelSB = std::make_shared<Eppo::Buffer>(width * height * sizeof(glm::vec4), 0);
 
 	m_VerticalIterator.resize(height);
 	for (uint32_t i = 0; i < height; i++)
@@ -63,9 +65,9 @@ void Renderer::Render(const Scene& scene, const Camera& camera, RenderMode mode)
 
 	switch (mode)
 	{
-		case RenderMode::CpuST: RenderST(scene, camera); break;
-		case RenderMode::CpuMT: RenderMT(scene, camera); break;
-		case RenderMode::Gpu:	RenderGPU(scene, camera); break;
+		case RenderMode::CpuST: RenderST(); break;
+		case RenderMode::CpuMT: RenderMT(); break;
+		case RenderMode::Gpu:	RenderGPU(); break;
 	}
 
 	m_Image->SetData(m_ImageData, m_Image->GetWidth() * m_Image->GetHeight());
@@ -76,49 +78,80 @@ void Renderer::Render(const Scene& scene, const Camera& camera, RenderMode mode)
 		m_FrameIndex = 1;
 }
 
-void Renderer::RenderST(const Scene& scene, const Camera& camera)
+void Renderer::RenderCommon(uint32_t y)
 {
-	for (uint32_t y = 0; y < m_Image->GetHeight(); y++)
+	for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
 	{
-		for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
-		{
-			glm::vec3 color = RayGen(x, y);
-			m_AccumulatedColorData[y * m_Image->GetWidth() + x] += color;
+		glm::vec3 color = RayGen(x, y);
+		m_AccumulatedColorData[y * m_Image->GetWidth() + x] += color;
 
-			glm::vec3 accumulatedColor = m_AccumulatedColorData[y * m_Image->GetWidth() + x];
-			accumulatedColor /= (float)m_FrameIndex;
-			accumulatedColor = glm::clamp(accumulatedColor, 0.0f, 1.0f);
+		glm::vec3 accumulatedColor = m_AccumulatedColorData[y * m_Image->GetWidth() + x];
+		accumulatedColor /= (float)m_FrameIndex;
+		accumulatedColor = glm::clamp(accumulatedColor, 0.0f, 1.0f);
 
-			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(glm::vec4(accumulatedColor, 1.0f));
-		}
+		m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(glm::vec4(accumulatedColor, 1.0f));
 	}
 }
 
-void Renderer::RenderMT(const Scene& scene, const Camera& camera)
+void Renderer::RenderST()
+{
+	for (uint32_t y = 0; y < m_Image->GetHeight(); y++)
+	{
+		RenderCommon(y);
+	}
+}
+
+void Renderer::RenderMT()
 {
 	std::for_each(std::execution::par, m_VerticalIterator.begin(), m_VerticalIterator.end(), [this](uint32_t y)
 	{
-		for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
-		{
-			glm::vec3 color = RayGen(x, y);
-			m_AccumulatedColorData[y * m_Image->GetWidth() + x] += color;
-
-			glm::vec3 accumulatedColor = m_AccumulatedColorData[y * m_Image->GetWidth() + x];
-			accumulatedColor /= (float)m_FrameIndex;
-			accumulatedColor = glm::clamp(accumulatedColor, 0.0f, 1.0f);
-
-			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(glm::vec4(accumulatedColor, 1.0f));
-		}
+		RenderCommon(y);
 	});
 }
 
-void Renderer::RenderGPU(const Scene& scene, const Camera& camera)
+void Renderer::RenderGPU()
 {
+	// Update camera uniform
+	m_CameraData.View = m_ActiveCamera->GetView();
+	m_CameraData.InverseView = m_ActiveCamera->GetInverseView();
+	m_CameraData.Projection = m_ActiveCamera->GetProjection();
+	m_CameraData.InverseProjection = m_ActiveCamera->GetInverseProjection();
+	m_CameraData.Position = glm::vec4(m_ActiveCamera->GetPosition(), (float)m_FrameIndex);
+	m_CameraData.Direction = glm::vec4(m_ActiveCamera->GetDirection(), 0.0);
+
+	m_CameraUB->SetData(&m_CameraData, sizeof(CameraData));
+
+	// Update sphere storage
+	{
+		uint32_t size = m_ActiveScene->m_Spheres.size() * sizeof(Sphere);
+		if (!m_SphereSB || size != m_SphereSB->GetSize())
+			m_SphereSB = std::make_shared<Eppo::Buffer>(size, 1);
+
+		m_SphereSB->SetData((void*)m_ActiveScene->m_Spheres.data(), size);
+	}
+
+	// Update material storage
+	{
+		uint32_t size = m_ActiveScene->m_Materials.size() * sizeof(Material);
+		if (!m_MaterialSB || size != m_MaterialSB->GetSize())
+			m_MaterialSB = std::make_shared<Eppo::Buffer>(size, 2);
+
+		m_MaterialSB->SetData((void*)m_ActiveScene->m_Materials.data(), size);
+	}
+
+	// Dispatch compute shader
+	Eppo::Query query;
+	query.Begin();
+
 	m_Compute->Bind();
 	m_Compute->Dispatch(m_Image->GetWidth(), m_Image->GetHeight(), 1);
 
-	m_Buffer->Bind();
-	glm::vec4* data = m_Buffer->MapBuffer();
+	query.End();
+	m_Settings.m_LastRenderTime = query.GetResults();
+
+	m_Compute->MemBarrier();
+
+	glm::vec4* data = m_PixelSB->MapBuffer();
 	if (!data)
 		return;
 
@@ -127,9 +160,17 @@ void Renderer::RenderGPU(const Scene& scene, const Camera& camera)
 		for (uint32_t x = 0; x < m_Image->GetWidth(); x++)
 		{
 			glm::vec4 color = data[y * m_Image->GetWidth() + x];
-			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(color);
+			m_AccumulatedColorData[y * m_Image->GetWidth() + x] += glm::vec3(color.r, color.g, color.b);
+
+			glm::vec3 accumulatedColor = m_AccumulatedColorData[y * m_Image->GetWidth() + x];
+			accumulatedColor /= (float)m_FrameIndex;
+			accumulatedColor = glm::clamp(accumulatedColor, 0.0f, 1.0f);
+
+			m_ImageData[y * m_Image->GetWidth() + x] = Utils::ConvertToRGBA(glm::vec4(accumulatedColor, 1.0f));
 		}
 	}
+
+	m_PixelSB->UnmapBuffer();
 }
 
 glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
@@ -166,7 +207,6 @@ glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
 		ray.Direction = glm::normalize(payload.WorldNormal + Eppo::FastRandom::InUnitSphere(seed));
-		//ray.Direction = glm::reflect(ray.Direction,	payload.WorldNormal + material.Roughness * Eppo::FastRandom::InUnitSphere(seed));
 	}
 	
 	return light;
