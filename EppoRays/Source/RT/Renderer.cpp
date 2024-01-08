@@ -206,12 +206,21 @@ glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 
 		contribution *= material.Albedo;
 		light += material.Emission * material.EmissionPower;
+		
+		// Importance sampling
+		glm::vec3 microFacetDirection = payload.WorldNormal + material.Roughness * Eppo::FastRandom::InUnitSphere(seed);
+		float weight = glm::dot(microFacetDirection, payload.WorldNormal);
+		microFacetDirection *= weight;
 
 		ray.Origin = payload.WorldPosition + payload.WorldNormal * 0.0001f;
-		ray.Direction = glm::normalize(payload.WorldNormal + Eppo::FastRandom::InUnitSphere(seed));
+		ray.Direction = glm::reflect(ray.Direction, microFacetDirection);
+		//ray.Direction = glm::normalize(payload.WorldNormal + Eppo::FastRandom::InUnitSphere(seed));
 	}
-	
-	return light;
+
+	// Gamma correction
+	light = glm::pow(light, glm::vec3(1.0f / 2.2f));
+
+	return light * contribution;
 }
 
 Renderer::HitPayload Renderer::TraceRay(const Ray& ray) const
