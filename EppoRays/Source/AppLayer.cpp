@@ -5,37 +5,64 @@
 
 void AppLayer::OnAttach()
 {
-	Material& greenMaterial = m_Scene.m_Materials.emplace_back();
-	greenMaterial.Albedo = glm::vec3(0.2f, 1.0f, 0.2f);
-	greenMaterial.Roughness = 0.05f;
+	{
+		Material& material = m_Scene.m_Materials.emplace_back();
+		material.Albedo = glm::vec3(0.2f, 1.0f, 0.2f);
+		material.Roughness = 0.02f;
+	}
 
-	Material& blueMaterial = m_Scene.m_Materials.emplace_back();
-	blueMaterial.Albedo = glm::vec3(0.2f, 0.6f, 0.8f);
-	blueMaterial.Roughness = 0.1f;
+	{
+		Material& material = m_Scene.m_Materials.emplace_back();
+		material.Albedo = glm::vec3(0.2f, 0.6f, 0.8f);
+		material.Roughness = 0.4f;
+	}
 
-	Material& lightMaterial = m_Scene.m_Materials.emplace_back();
-	lightMaterial.Albedo = glm::vec3(0.0f, 0.0f, 0.0f);
-	lightMaterial.Roughness = 0.01f;
-	lightMaterial.Emission = glm::vec3(0.7f, 0.2f, 0.0f);
-	lightMaterial.EmissionPower = 10.0f;
+	{
+		Material& material = m_Scene.m_Materials.emplace_back();
+		material.Albedo = glm::vec3(1.0f, 1.0f, 1.0f);
+		material.Roughness = 1.00f;
+		material.Emission = glm::vec3(1.0f, 1.0f, 1.0f);
+		material.EmissionPower = 2.0f;
+	}
 
-	Sphere& smallSphere = m_Scene.m_Spheres.emplace_back();
-	smallSphere.Position = glm::vec3(0.0f, 1.0f, 0.0f);
-	smallSphere.Radius = 1.0f;
-	smallSphere.MaterialIndex = 0;
+	{
+		Sphere& sphere = m_Scene.m_Spheres.emplace_back();
+		sphere.Position = glm::vec3(0.0f, 1.0f, 0.0f);
+		sphere.Radius = 1.0f;
+		sphere.MaterialIndex = 0;
+	}
 
-	Sphere& bigSphere = m_Scene.m_Spheres.emplace_back();
-	bigSphere.Position = glm::vec3(0.0f, -50.0f, 0.0f);
-	bigSphere.Radius = 50.0f;
-	bigSphere.MaterialIndex = 1;
+	{
+		Sphere& sphere = m_Scene.m_Spheres.emplace_back();
+		sphere.Position = glm::vec3(0.0f, -50.0f, 0.0f);
+		sphere.Radius = 50.0f;
+		sphere.MaterialIndex = 1;
+	}
 
-	Sphere& lightSphere = m_Scene.m_Spheres.emplace_back();
-	lightSphere.Position = glm::vec3(0.0f, 5.0f, -30.0f);
-	lightSphere.Radius = 10.0f;
-	lightSphere.MaterialIndex = 2;
+	{
+		Sphere& sphere = m_Scene.m_Spheres.emplace_back();
+		sphere.Position = glm::vec3(0.0f, 150.0f, 0.0f);
+		sphere.Radius = 100.0f;
+		sphere.MaterialIndex = 2;
+	}
 
-	m_Camera.SetPosition(glm::vec3(4.0f, 2.0f, 3.0f));
-	m_Camera.SetDirection(glm::vec3(-0.6f, -0.2f, -0.8f));
+	{
+		Sphere& sphere = m_Scene.m_Spheres.emplace_back();
+		sphere.Position = glm::vec3(-3.0f, 1.5f, 0.0f);
+		sphere.Radius = 1.5f;
+		sphere.MaterialIndex = 0;
+	}
+
+	for (uint32_t i = 0; i < 5; i++)
+	{
+		Sphere& sphere = m_Scene.m_Spheres.emplace_back();
+		sphere.Position = glm::vec3(1.0f - i, 0.3f, -cos(-2.0f + (float)i) - 5.0f);
+		sphere.Radius = 0.5f;
+		sphere.MaterialIndex = Eppo::Random::UInt32(0, 1);
+	}
+
+	m_Camera.SetPosition(glm::vec3(5.9f, 6.5f, -0.3f));
+	m_Camera.SetDirection(glm::vec3(-0.8f, -0.6f, -0.2f));
 
 	m_Renderer.Init();
 }
@@ -59,26 +86,31 @@ void AppLayer::OnUIRender()
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 	ImGui::Begin("Viewport");
 
-	m_ViewportWidth = ImGui::GetContentRegionAvail().x;
-	m_ViewportHeight = ImGui::GetContentRegionAvail().y;
+	m_ViewportWidth = (uint32_t)ImGui::GetContentRegionAvail().x;
+	m_ViewportHeight = (uint32_t)ImGui::GetContentRegionAvail().y;
 
 	const auto& image = m_Renderer.GetImage();
 	if (image)
-		ImGui::Image((ImTextureID)image->GetRendererID(), ImVec2(image->GetWidth(), image->GetHeight()), ImVec2(0, 1), ImVec2(1, 0));
+		ImGui::Image((ImTextureID)image->GetRendererID(), ImVec2((float)image->GetWidth(), (float)image->GetHeight()), ImVec2(0, 1), ImVec2(1, 0));
 
 	ImGui::End();
 	ImGui::PopStyleVar();
 
 	ImGui::Begin("Settings");
+
+	auto& settings = m_Renderer.GetSettings();
 	
 	ImGui::Text("Render time(cpu): %.3fms", m_LastRenderTime / 1000.0f);
-	ImGui::Text("Render time(gpu): %.3fms", m_Renderer.GetSettings().m_LastRenderTime / 1000.0f / 1000.0f);
+
+	if (settings.Mode == Renderer::RenderMode::Gpu)
+		ImGui::Text("Render time(gpu): %.3fms", settings.LastRenderTime / 1000.0f / 1000.0f);
+
 	ImGui::Text("Camera position: X: %.1f, Y: %.1f, Z: %.1f", m_Camera.GetPosition().x, m_Camera.GetPosition().y, m_Camera.GetPosition().z);
 	ImGui::Text("Camera direction: X: %.1f, Y: %.1f, Z: %.1f", m_Camera.GetDirection().x, m_Camera.GetDirection().y, m_Camera.GetDirection().z);
 
-	ImGui::Checkbox("Accumulate", &m_Renderer.GetSettings().m_Accumulate);
+	ImGui::Checkbox("Accumulate", &settings.Accumulate);
 
-	bool accumulate = m_Renderer.GetSettings().m_Accumulate;
+	bool accumulate = m_Renderer.GetSettings().Accumulate;
 	if (accumulate)
 		ImGui::Text("Frames accumulated: %d", m_Renderer.GetFrameIndex());
 	
@@ -87,6 +119,7 @@ void AppLayer::OnUIRender()
 
 	ImGui::Separator();
 
+	bool changed = false;
 	if (ImGui::CollapsingHeader("Materials", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		for (uint32_t i = 0; i < m_Scene.m_Materials.size(); i++)
@@ -97,10 +130,10 @@ void AppLayer::OnUIRender()
 				ImGui::Separator();
 
 			ImGui::PushID(i);
-			ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo));
-			ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f);
-			ImGui::ColorEdit3("Emission", glm::value_ptr(material.Emission));
-			ImGui::DragFloat("Emission Power", &material.EmissionPower, 0.01f, 0.0f, 1.0f);
+			if (ImGui::ColorEdit3("Albedo", glm::value_ptr(material.Albedo))) changed = true;
+			if (ImGui::ColorEdit3("Emission", glm::value_ptr(material.Emission))) changed = true;
+			if (ImGui::DragFloat("Emission Power", &material.EmissionPower, 0.01f, 0.0f, 1000.0f)) changed = true;
+			if (ImGui::DragFloat("Roughness", &material.Roughness, 0.01f, 0.0f, 1.0f)) changed = true;
 			ImGui::PopID();
 		}
 	}
@@ -115,12 +148,15 @@ void AppLayer::OnUIRender()
 				ImGui::Separator();
 
 			ImGui::PushID(i);
-			ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f);
-			ImGui::DragFloat("Radius", &sphere.Radius);
-			ImGui::DragInt("Material index", (int*)&sphere.MaterialIndex, 1.0f, 0, m_Scene.m_Materials.size() - 1);
+			if (ImGui::DragFloat3("Position", glm::value_ptr(sphere.Position), 0.1f)) changed = true;
+			if (ImGui::DragFloat("Radius", &sphere.Radius)) changed = true;
+			if (ImGui::DragInt("Material index", (int*)&sphere.MaterialIndex, 1.0f, 0, (int)m_Scene.m_Materials.size() - 1)) changed = true;
 			ImGui::PopID();
 		}
 	}
+
+	if (changed)
+		m_Renderer.ResetFrameIndex();
 
 	ImGui::End();
 }

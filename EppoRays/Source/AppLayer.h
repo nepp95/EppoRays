@@ -18,7 +18,7 @@ public:
 	void OnUIRender() override;
 
 private:
-	Camera m_Camera = Camera(45.0f, 0.1f, 1000.0f);
+	Camera m_Camera = Camera(45.0f, 0.1f, 10000.0f);
 	Scene m_Scene;
 	Renderer m_Renderer;
 

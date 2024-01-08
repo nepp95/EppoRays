@@ -21,8 +21,9 @@ public:
 
 	struct Settings
 	{
-		bool m_Accumulate = true;
-		uint64_t m_LastRenderTime = 0;
+		bool Accumulate = true;
+		RenderMode Mode;
+		uint64_t LastRenderTime = 0;
 	};
 
 public:

@@ -57,6 +57,8 @@ void Renderer::OnResize(uint32_t width, uint32_t height)
 
 void Renderer::Render(const Scene& scene, const Camera& camera, RenderMode mode)
 {
+	m_Settings.Mode = mode;
+
 	m_ActiveCamera = &camera;
 	m_ActiveScene = &scene;
 
@@ -72,7 +74,7 @@ void Renderer::Render(const Scene& scene, const Camera& camera, RenderMode mode)
 
 	m_Image->SetData(m_ImageData, m_Image->GetWidth() * m_Image->GetHeight());
 
-	if (m_Settings.m_Accumulate)
+	if (m_Settings.Accumulate)
 		m_FrameIndex++;
 	else
 		m_FrameIndex = 1;
@@ -147,7 +149,7 @@ void Renderer::RenderGPU()
 	m_Compute->Dispatch(m_Image->GetWidth(), m_Image->GetHeight(), 1);
 
 	query.End();
-	m_Settings.m_LastRenderTime = query.GetResults();
+	m_Settings.LastRenderTime = query.GetResults();
 
 	m_Compute->MemBarrier();
 
@@ -185,7 +187,7 @@ glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 	uint32_t seed = y * m_Image->GetWidth() + x;
 	seed *= m_FrameIndex;
 
-	uint32_t bounces = 10;
+	uint32_t bounces = 5;
 	for (uint32_t i = 0; i < bounces; i++)
 	{
 		seed += i;
@@ -195,7 +197,7 @@ glm::vec3 Renderer::RayGen(uint32_t x, uint32_t y) const
 		if (payload.HitDistance < 0.0f)
 		{
 			glm::vec3 skyColor = Utils::Lerp(glm::vec3(1.0f), glm::vec3(0.5f, 0.7f, 1.0f), ray.Direction.y);
-			//color += skyColor * multiplier;
+			//light += skyColor;
 			break;
 		}
 
