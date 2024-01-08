@@ -26,6 +26,19 @@ project "EppoRays"
         "EppoCore"
     }
 
+    filter "system:linux"
+        links {
+            "glfw",
+            "glad",
+            "imgui",
+            "spdlog",
+            "GLU",
+            "GL",
+            "X11",
+            "dl",
+            "pthread"
+        }
+
     filter "configurations:Debug"
         defines "EPPO_DEBUG"
         runtime "Debug"
