@@ -2,7 +2,10 @@
 
 #include <EppoCore/Core/Random.h>
 
-#include <execution>
+// TODO: Find solution that is platform agnostic
+#ifdef EPPO_WINDOWS
+	#include <execution>
+#endif
 
 namespace Utils
 {
@@ -138,10 +141,13 @@ void Renderer::RenderST()
 
 void Renderer::RenderMT()
 {
-	std::for_each(std::execution::par, m_VerticalIterator.begin(), m_VerticalIterator.end(), [this](uint32_t y)
-	{
-		RenderCommon(y);
-	});
+	// TODO: Find solution that is platform agnostic
+	#ifdef EPPO_WINDOWS
+		std::for_each(std::execution::par, m_VerticalIterator.begin(), m_VerticalIterator.end(), [this](uint32_t y)
+		{
+			RenderCommon(y);
+		});
+	#endif
 }
 
 void Renderer::RenderGPU()

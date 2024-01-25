@@ -3,6 +3,7 @@
 .vscode
 *.vcxproj*
 *.sln
+Makefile
 
 # Binaries
 /Bin
