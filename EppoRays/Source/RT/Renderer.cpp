@@ -23,6 +23,39 @@ namespace Utils
 
 		return (1.0f - a) * startValue + a * endValue;
 	}
+
+	inline static void LogMinMaxAvg(const std::vector<glm::vec3>& values, const std::string& name)
+	{
+		glm::vec3 min(0.0f), max(0.0f), avg(0.0f);
+		bool first = true;
+
+		uint32_t count = 0;
+		for (const auto& value : values)
+		{
+			if (first)
+			{
+				min = value;
+				max = value;
+				first = false;
+			}
+
+			glm::vec3 tempMin = glm::lessThan(value, min);
+			if (tempMin.r) min.r = value.r;
+			if (tempMin.g) min.g = value.g;
+			if (tempMin.b) min.b = value.b;
+
+			glm::vec3 tempMax = glm::greaterThan(value, max);
+			if (tempMax.r) max.r = value.r;
+			if (tempMax.g) max.g = value.g;
+			if (tempMax.b) max.b = value.b;
+
+			avg += value;
+			count++;
+		}
+
+		if (!(min.r == 0.0f && min.g == 0.0f && min.b == 0.0f && max.r == 0.0f && max.g == 0.0f && max.b == 0.0f))
+			EPPO_TRACE("{}: Min: {}, Max: {}, Avg: {}", name, glm::to_string(min), glm::to_string(max), glm::to_string(avg / (float)count));
+	}
 }
 
 void Renderer::Init()
